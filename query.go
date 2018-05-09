@@ -1,5 +1,7 @@
 package meander
 
+var APIKey string
+
 type Place struct {
 	// NOTE: You can access `Lat` by `place.Lat` because the field name for
 	// `googleGeometry` isn't specified and `Lat` is unique among the attribute
