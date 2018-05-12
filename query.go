@@ -3,8 +3,12 @@ package meander
 import (
 	"encoding/json"
 	"fmt"
+	"log"
+	"math/rand"
 	"net/http"
 	"net/url"
+	"sync"
+	"time"
 )
 
 var APIKey string
@@ -83,4 +87,48 @@ func (q *Query) find(types string) (*googleResponse, error) {
 	}
 
 	return &response, nil
+}
+
+func (q *Query) Run() []interface{} {
+	rand.Seed(time.Now().UnixNano())
+
+	var w sync.WaitGroup
+	places := make([]interface{}, len(q.Journey))
+
+	for i, r := range q.Journey {
+		w.Add(1)
+
+		go func(types string, i int) {
+			defer w.Done() // NOTE: `Done` decrements the WaitGroup counter by one.
+
+			response, err := q.find(types)
+			if err != nil {
+				log.Println("施設の検索に失敗しました:", err)
+				return
+			}
+			if len(response.Results) == 0 {
+				log.Println("施設が見つかりませんでした:", types)
+				return
+			}
+
+			for _, result := range response.Results {
+				for _, photo := range result.Photos {
+					// TODO: Investigate URL values returned by the API
+					photo.URL = "https://maps.googleapis.com/maps/api/place/photo?" +
+						"maxwidth=1000&photoreference=" + photo.PhotoRef +
+						"&key=" + APIKey
+				}
+			}
+
+			// NOTE: We don't have to use `sync.Mutex` because we assign the value to
+			// a different element of `places` in each goroutine (`i` is an argument of
+			// each goroutine, so it is constant).
+			randI := rand.Intn(len(response.Results))
+			places[i] = response.Results[randI]
+		}(r, i)
+	}
+	// NOTE: All goroutines blocked on Wait are released when the counter becomes zero.
+	w.Wait()
+
+	return places
 }
