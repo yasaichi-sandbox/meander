@@ -5,6 +5,8 @@ import (
 	"github.com/yasaichi-sandbox/meander"
 	"net/http"
 	"os"
+	"strconv"
+	"strings"
 )
 
 func main() {
@@ -12,6 +14,19 @@ func main() {
 
 	http.HandleFunc("/journeys", func(w http.ResponseWriter, r *http.Request) {
 		respond(w, r, meander.Journeys)
+	})
+	http.HandleFunc("/recommendations", func(w http.ResponseWriter, r *http.Request) {
+		urlQuery := r.URL.Query()
+
+		q := &meander.Query{
+			Journey:      strings.Split(urlQuery.Get("journey"), "|"),
+			CostRangeStr: urlQuery.Get("cost"),
+		}
+		q.Lat, _ = strconv.ParseFloat(urlQuery.Get("lat"), 64)
+		q.Lng, _ = strconv.ParseFloat(urlQuery.Get("lng"), 64)
+		q.Radius, _ = strconv.Atoi(urlQuery.Get("radius"))
+
+		respond(w, r, q.Run())
 	})
 
 	http.ListenAndServe(":8080", nil)
