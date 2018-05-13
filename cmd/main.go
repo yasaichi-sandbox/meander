@@ -12,10 +12,10 @@ import (
 func main() {
 	meander.APIKey = os.Getenv("GOOGLE_PLACES_API_KEY")
 
-	http.HandleFunc("/journeys", func(w http.ResponseWriter, r *http.Request) {
+	http.HandleFunc("/journeys", cors(func(w http.ResponseWriter, r *http.Request) {
 		respond(w, r, meander.Journeys)
-	})
-	http.HandleFunc("/recommendations", func(w http.ResponseWriter, r *http.Request) {
+	}))
+	http.HandleFunc("/recommendations", cors(func(w http.ResponseWriter, r *http.Request) {
 		urlQuery := r.URL.Query()
 
 		q := &meander.Query{
@@ -27,9 +27,17 @@ func main() {
 		q.Radius, _ = strconv.Atoi(urlQuery.Get("radius"))
 
 		respond(w, r, q.Run())
-	})
+	}))
 
 	http.ListenAndServe(":8080", nil)
+}
+
+func cors(f http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+
+		f(w, r)
+	}
 }
 
 func respond(w http.ResponseWriter, r *http.Request, data []interface{}) error {
