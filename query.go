@@ -75,6 +75,7 @@ func (q *Query) find(types string) (*googleResponse, error) {
 		vals.Set("maxprice", fmt.Sprintf("%d", int(r.To)-1))
 	}
 
+	u.RawQuery = vals.Encode()
 	res, err := http.Get(u.String())
 	if err != nil {
 		return nil, err
@@ -113,7 +114,7 @@ func (q *Query) Run() []interface{} {
 
 			for _, result := range response.Results {
 				for _, photo := range result.Photos {
-					// TODO: Investigate URL values returned by the API
+					// NOTE: `url` isn't included in the API response.
 					photo.URL = "https://maps.googleapis.com/maps/api/place/photo?" +
 						"maxwidth=1000&photoreference=" + photo.PhotoRef +
 						"&key=" + APIKey
